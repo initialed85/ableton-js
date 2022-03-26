@@ -1,3 +1,6 @@
+import datetime
+
+
 class Interface(object):
     obj_ids = dict()
     listeners = dict()
@@ -21,6 +24,7 @@ class Interface(object):
         return Interface.obj_ids[nsid]
 
     def handle(self, payload):
+        before = datetime.datetime.now()
         name = payload.get("name")
         uuid = payload.get("uuid")
         args = payload.get("args", {})
@@ -29,15 +33,24 @@ class Interface(object):
         try:
             # Try self-defined functions first
             if hasattr(self, name) and callable(getattr(self, name)):
+                before1 = datetime.datetime.now()
                 result = getattr(self, name)(ns=ns, **args)
+                after1 = datetime.datetime.now()
+                self.log_message(f"Interface.handle took {(after1 - before1).total_seconds() * 1000} ms to invoke {name}")
                 self.socket.send("result", result, uuid)
             # Check if the function exists in the Ableton API as fallback
             elif hasattr(ns, name) and callable(getattr(ns, name)):
                 if isinstance(args, dict):
+                    before1 = datetime.datetime.now()
                     result = getattr(ns, name)(**args)
+                    after1 = datetime.datetime.now()
+                    self.log_message(f"Interface.handle took {(after1 - before1).total_seconds() * 1000} ms to invoke {name}")
                     self.socket.send("result", result, uuid)
                 elif isinstance(args, list):
+                    before1 = datetime.datetime.now()
                     result = getattr(ns, name)(*args)
+                    after1 = datetime.datetime.now()
+                    self.log_message(f"Interface.handle took {(after1 - before1).total_seconds() * 1000} ms to invoke {name}")
                     self.socket.send("result", result, uuid)
                 else:
                     self.socket.send("error", "Function call failed: " + str(args) +
@@ -47,6 +60,8 @@ class Interface(object):
                                  " doesn't exist or isn't callable", uuid)
         except Exception as e:
             self.socket.send("error", str(e.args[0]), uuid)
+        after = datetime.datetime.now()
+        self.log_message(f"Interface.handle took {(after - before).total_seconds() * 1000} ms to handle {name}")
 
     def add_listener(self, ns, prop, eventId, nsid="Default"):
         try:

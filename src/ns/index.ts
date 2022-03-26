@@ -14,16 +14,29 @@ export class Namespace<GP, TP, SP, OP> {
   async get<T extends keyof GP>(
     prop: T,
   ): Promise<T extends keyof TP ? TP[T] : GP[T]> {
+    const before = Date.now();
+
+    const before1 = Date.now();
     const res = await this.ableton.getProp(this.ns, this.nsid, String(prop));
-    const transformer = this.transformers[
-      (prop as any) as Extract<keyof GP, keyof TP>
-    ];
+    const after1 = Date.now();
+    console.log(`getProp; ${after1 - before1} ms`);
+
+    const transformer = this.transformers[prop as any as Extract<keyof GP, keyof TP>];
+
+    let retval;
 
     if (res !== null && transformer) {
-      return transformer(res) as any;
-    } else {
-      return res;
+      const before2 = Date.now();
+      retval = transformer(res) as any;
+      const after2 = Date.now();
+      console.log(`${transformer}; ${after2 - before2} ms`);
     }
+
+    const after = Date.now();
+
+    console.log(`get; ${after - before} ms\n`);
+
+    return retval;
   }
 
   async set<T extends keyof SP>(prop: T, value: SP[T]): Promise<null> {

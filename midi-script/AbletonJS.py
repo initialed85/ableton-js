@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-import sys
+import datetime
 
 from .Socket import Socket
 from .Interface import Interface
@@ -54,6 +54,8 @@ class AbletonJS(ControlSurface):
 
     def command_handler(self, payload):
         self.log_message("Received command: " + str(payload))
+
+        before = datetime.datetime.now()
         namespace = payload["ns"]
 
         if namespace in self.handlers:
@@ -61,3 +63,6 @@ class AbletonJS(ControlSurface):
             handler.handle(payload)
         else:
             self.socket.send("error", "No handler for NS " + str(namespace))
+
+        after = datetime.datetime.now()
+        self.log_message(f"AbletonJS.command_handler took {(after - before).total_seconds() * 1000} ms to handle {str(payload)}")

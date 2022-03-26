@@ -1,3 +1,4 @@
+import datetime
 import socket
 import json
 import struct
@@ -66,6 +67,7 @@ class Socket(object):
         def jsonReplace(o):
             return str(o)
 
+        before = datetime.datetime.now()
         try:
             self._sendto(json.dumps(
                 {"event": name, "data": obj, "uuid": uuid}, default=jsonReplace, ensure_ascii=False))
@@ -75,6 +77,9 @@ class Socket(object):
                 {"event": "error", "data": error, "uuid": uuid}, default=jsonReplace, ensure_ascii=False))
             self.log_message("Socket Error " + name +
                              "(" + str(uuid) + "): " + str(e))
+        after = datetime.datetime.now()
+
+        self.log_message(f"Socket.send took {(after - before).total_seconds() * 1000} ms to send {name}")
 
     def shutdown(self):
         self._socket.close()
@@ -83,6 +88,7 @@ class Socket(object):
         try:
             buffer = bytes()
             while 1:
+                before = datetime.datetime.now()
                 data = self._socket.recv(65536)
                 if len(data) and self.input_handler:
                     buffer += data[1:]
@@ -95,6 +101,8 @@ class Socket(object):
                         self.log_message("Receiving: " + str(payload))
                         self.input_handler(payload)
                         buffer = bytes()
+                after = datetime.datetime.now()
+                self.log_message(f"Socket.process took {(after - before).total_seconds() * 1000} ms for happy path loop iteration\n")
         except socket.error as e:
             return
         except Exception as e:

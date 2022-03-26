@@ -127,6 +127,7 @@ export class Ableton extends EventEmitter implements ConnectionEventEmitter {
   }
 
   private handleIncoming(msg: Buffer, info: dgram.RemoteInfo) {
+    const before = Date.now();
     try {
       const index = msg[0];
       const message = msg.slice(1);
@@ -144,6 +145,8 @@ export class Ableton extends EventEmitter implements ConnectionEventEmitter {
       this.buffer = [];
       this.emit("error", e);
     }
+    const after = Date.now();
+    console.log(`handleIncoming; ${after - before} ms`);
   }
 
   private handleUncompressedMessage(msg: string) {
@@ -204,6 +207,8 @@ export class Ableton extends EventEmitter implements ConnectionEventEmitter {
     timeout: number = 2000,
   ): Promise<any> {
     return new Promise((res, rej) => {
+      const before = Date.now();
+
       const msgId = v4();
       const payload: Command = {
         uuid: msgId,
@@ -236,6 +241,8 @@ export class Ableton extends EventEmitter implements ConnectionEventEmitter {
           this.setPing(Date.now() - currentTimestamp);
           clearTimeout(timeoutId);
           res(data);
+          console.log(`sendCommand; ${after - before} ms`);
+          console.log(`getPing; ${this.getPing()} ms`);
         },
         rej,
         clearTimeout: () => {
@@ -244,6 +251,8 @@ export class Ableton extends EventEmitter implements ConnectionEventEmitter {
       });
 
       this.sendRaw(msg);
+
+      const after = Date.now();
     });
   }
 
