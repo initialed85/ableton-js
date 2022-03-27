@@ -3,6 +3,7 @@ import socket
 import json
 import struct
 import zlib
+import select
 from threading import Timer
 
 
@@ -27,7 +28,7 @@ class Socket(object):
         self.input_handler = handler
 
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self._socket.setblocking(0)
+        self._socket.setblocking(False)
 
         self._local_addr = (localhost, localport)
         self._remote_addr = (remotehost, remoteport)
@@ -85,11 +86,19 @@ class Socket(object):
         self._socket.close()
 
     def process(self):
+        r, _, _ = select.select([self._socket], [], [])
+        if not (r and len(r) == 1):
+            self.log_message("nothing to do")
+            return
+
+        readable_socket = r[0]
+        self.log_message(f"owe work to {readable_socket}")
+
         try:
             buffer = bytes()
             while 1:
                 before = datetime.datetime.now()
-                data = self._socket.recv(65536)
+                data = readable_socket.recv(65536)
                 if len(data) and self.input_handler:
                     buffer += data[1:]
 
@@ -103,7 +112,7 @@ class Socket(object):
                         buffer = bytes()
                 after = datetime.datetime.now()
                 self.log_message(f"Socket.process took {(after - before).total_seconds() * 1000} ms for happy path loop iteration\n")
-        except socket.error as e:
+        except socket.error:
             return
         except Exception as e:
             self.log_message("Error while processing: " + str(e.args))
